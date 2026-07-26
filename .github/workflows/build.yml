@@ -3,6 +3,11 @@ name: build
 on:
   push:
     branches: [main]
+  # Build (but never publish) on PRs. Without this, a dependency PR — a base
+  # image digest bump, or a major Actions bump — shows zero checks and can only
+  # fail after merge, on the run that publishes :latest.
+  pull_request:
+    branches: [main]
   # Weekly rebuild picks up Ubuntu security updates. exe.dev VMs ship with the
   # apt-daily timers masked, so rebuilding the image is how patches land —
   # recreate or rebase a VM to pick them up.
@@ -22,7 +27,10 @@ jobs:
 
       - uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3
 
-      - uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3
+      # Skipped on PRs: nothing is pushed there, and a fork PR only ever gets a
+      # read-only GITHUB_TOKEN, so attempting a registry login would just fail.
+      - if: github.event_name != 'pull_request'
+        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
@@ -42,13 +50,23 @@ jobs:
           {
             echo "date=$(date -u +%Y-%m-%d)"
             echo "build=$(date -u +%Y-%m-%d).${{ github.run_number }}.${{ github.run_attempt }}"
+            echo "created=$(date -u +%Y-%m-%dT%H:%M:%SZ)"
           } >> "$GITHUB_OUTPUT"
 
       - uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6
         with:
           context: .
           platforms: linux/amd64
-          push: true
+          # PRs build only — validation without publishing.
+          push: ${{ github.event_name != 'pull_request' }}
+          # Overrides the "24.04" version label inherited from ubuntu:24.04.
+          build-args: |
+            BUILD_ID=${{ steps.tag.outputs.build }}
+          # The static OCI labels live in the Dockerfile so local builds carry
+          # them too; only the per-build values are injected here.
+          labels: |
+            org.opencontainers.image.revision=${{ github.sha }}
+            org.opencontainers.image.created=${{ steps.tag.outputs.created }}
           # Moving:    :latest, :<date>, :<sha>
           # Immutable: :<date>.<run_number>.<run_attempt>
           tags: |
