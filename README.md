@@ -206,3 +206,20 @@ image can't drift off LTS onto an interim release — Renovate's ubuntu
 versioning already treats only LTS as stable, so this is belt-and-braces. That
 bump is a
 two-yearly human decision.
+
+Dependency PRs build without publishing — the workflow runs on `pull_request`
+but only pushes tags from `main`. A digest bump or a major Actions bump
+therefore gets validated before it can reach `:latest`.
+
+## Licence
+
+The build recipe in this repository — `Dockerfile`, `init`, `exe-setup.service`,
+`tmpfiles-tmp.conf`, `AGENTS.md` and the workflow — is MIT licensed, so fork and
+adapt it freely. See [LICENSE](LICENSE).
+
+The **image** that recipe produces is a different matter: it is Ubuntu plus a
+handful of Debian packages, each under its own licence (largely GPL and
+permissive). MIT covers the recipe, not the distribution contents, and cannot
+relicense them. Redistributing an Ubuntu-derived image is ordinary practice, but
+if you ship it as part of a product, the packages' terms are the ones that
+apply.
