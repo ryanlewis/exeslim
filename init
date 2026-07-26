@@ -1,0 +1,32 @@
+#!/bin/bash
+#
+# PID 1 for exe.dev VMs: prepare the environment, then hand off to systemd.
+#
+# Mirrors the precursor steps exeuntu's own /usr/local/bin/init performs.
+# Without these, systemd either refuses to start or comes up with no cgroup
+# controllers and no ability to bind low ports.
+
+if [[ $$ != 1 ]]; then
+	# systemd emits a very opaque telinit error otherwise.
+	echo "Must be run as pid 1 for systemd to start."
+	exit 1
+fi
+
+mkdir -p /run/systemd
+if [[ ! -f /sys/fs/cgroup/cgroup.controllers ]]; then
+	mount -t cgroup2 none /sys/fs/cgroup
+fi
+
+# Let unprivileged services bind :80/:443 directly.
+if [[ -w /proc/sys/net/ipv4/ip_unprivileged_port_start ]]; then
+	printf '0\n' >/proc/sys/net/ipv4/ip_unprivileged_port_start
+fi
+if [[ -w /proc/sys/net/ipv6/ip_unprivileged_port_start ]]; then
+	printf '0\n' >/proc/sys/net/ipv6/ip_unprivileged_port_start
+fi
+
+# Kata containers mount this readonly by default.
+mount -o remount,rw /proc/sys 2>/dev/null || true
+
+echo "Starting systemd..."
+exec /sbin/init --log-target=syslog --show-status=true

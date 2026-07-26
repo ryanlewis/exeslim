@@ -1,0 +1,43 @@
+name: build
+
+on:
+  push:
+    branches: [main]
+  # Weekly rebuild picks up Ubuntu security updates. exe.dev VMs ship with the
+  # apt-daily timers masked, so rebuilding the image is how patches land —
+  # recreate or rebase a VM to pick them up.
+  schedule:
+    - cron: '0 4 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          platforms: linux/amd64
+          push: true
+          tags: |
+            ghcr.io/ryanlewis/exeslim:latest
+            ghcr.io/ryanlewis/exeslim:${{ github.sha }}
+          # exe.dev reads image metadata (Cmd, Labels, ExposedPorts) directly.
+          # Provenance/SBOM turn the push into an attestation manifest list,
+          # which can hide that metadata from a plain OCI pull.
+          provenance: false
+          sbom: false
