@@ -141,10 +141,20 @@ after a push came up without a newly added package, while the same build's
 immutable tag had it — and both tags resolved to an identical digest at the
 registry, so the stale copy came from exe.dev's side.
 
-Every build is therefore also tagged with a UTC date (`:2026-07-26`) and the
-commit sha. **Prefer the date tag:** the weekly rebuild runs on the *same
-commit*, so `:<sha>` is not immutable across scheduled builds — only the date tag
-uniquely identifies a build. For absolute certainty, pin the digest:
+Each build publishes four tags. Only one of them is immutable:
+
+| Tag | Moves? |
+|---|---|
+| `:latest` | yes, every build |
+| `:2026-07-26` | yes — two builds on the same day overwrite it |
+| `:<sha>` | yes — the scheduled rebuild reuses the same commit |
+| **`:2026-07-26.7`** (date + run number) | **no — pin this** |
+
+```sh
+ssh exe.dev new --name=my-service --image=ghcr.io/ryanlewis/exeslim:2026-07-26.7
+```
+
+Or pin the digest, which is immutable by construction:
 
 ```sh
 ssh exe.dev new --name=my-service \
@@ -172,6 +182,15 @@ Want Shelley (and `new --prompt`) on these VMs? Uncomment
 ## Patching
 
 exe.dev VMs ship with the `apt-daily` timers masked, so nothing auto-patches.
-The weekly CI rebuild is the patch mechanism: it re-runs `apt-get` against a
-current Ubuntu, publishes a fresh date tag, and you recreate or rebase a VM to
-pick it up.
+The weekly CI rebuild is the patch mechanism: recreate or rebase a VM to pick up
+a fresh build.
+
+The build runs `apt-get dist-upgrade` before installing anything. That matters
+more here than it looks: this image installs only a handful of packages by name,
+so without a dist-upgrade every *other* package in the base layer would sit at
+whatever Canonical last shipped, however often the job reran.
+
+Renovate keeps the GitHub Actions and the base image digest current
+(`renovate.json`). Ubuntu major/minor bumps are deliberately disabled so the
+image can't drift off LTS onto a 9-month interim release — that bump is a
+two-yearly human decision.

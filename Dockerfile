@@ -18,6 +18,15 @@ FROM ubuntu:24.04
 SHELL ["/bin/bash", "-euxo", "pipefail", "-c"]
 
 RUN apt-get update \
+	# Pull security/bugfix updates for packages already in the base layer.
+	# Without this we ship whatever was current when Canonical last rebuilt
+	# ubuntu:24.04, which can be months behind — and since the packages we
+	# install by name are only a handful, everything else would stay stale
+	# no matter how often the weekly job reruns. Same reasoning as exeuntu.
+	&& DEBIAN_FRONTEND=noninteractive apt-get -y \
+		-o Dpkg::Options::=--force-confold \
+		-o Dpkg::Options::=--force-confdef \
+		dist-upgrade \
 	&& DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
 		systemd systemd-sysv dbus dbus-user-session \
 		ca-certificates curl \

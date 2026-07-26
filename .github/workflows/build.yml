@@ -32,6 +32,9 @@ jobs:
       # served a stale `:latest`. The scheduled rebuild also reuses the same
       # commit, so `:<sha>` is not immutable across weekly builds either. The
       # date tag is the one that uniquely identifies a given build.
+      # `<date>` alone is not immutable: two builds on the same day overwrite
+      # it (observed). `<date>.<run_number>` is unique per build and is the
+      # tag to pin.
       - id: tag
         run: echo "date=$(date -u +%Y-%m-%d)" >> "$GITHUB_OUTPUT"
 
@@ -40,9 +43,13 @@ jobs:
           context: .
           platforms: linux/amd64
           push: true
+          # Moving:   :latest, :<date>, :<sha> (the scheduled rebuild reuses
+          #           the same commit, so :<sha> moves too).
+          # Immutable: :<date>.<run_number>
           tags: |
             ghcr.io/ryanlewis/exeslim:latest
             ghcr.io/ryanlewis/exeslim:${{ steps.tag.outputs.date }}
+            ghcr.io/ryanlewis/exeslim:${{ steps.tag.outputs.date }}.${{ github.run_number }}
             ghcr.io/ryanlewis/exeslim:${{ github.sha }}
           # exe.dev reads image metadata (Cmd, Labels, ExposedPorts) directly.
           # Provenance/SBOM turn the push into an attestation manifest list,
