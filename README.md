@@ -4,8 +4,13 @@ A minimal [exe.dev](https://exe.dev) base image for **deployment targets** — V
 that run one service and are never developed on.
 
 ```sh
-ssh exe.dev new --name=my-service --image=ghcr.io/ryanlewis/exeslim:2026-07-26.7.1
+ssh exe.dev new --name=my-service --image=ghcr.io/ryanlewis/exeslim:<build-id>
 ```
+
+Take `<build-id>` from the
+[package page](https://github.com/ryanlewis/exeslim/pkgs/container/exeslim) — it
+looks like `2026-07-26.20.1`. Don't use `:latest`;
+[here's why](#dont-use-latest).
 
 ## Why
 
@@ -153,15 +158,17 @@ Each build publishes four tags. Only one of them is immutable:
 | Tag | Moves? |
 |---|---|
 | `:latest` | yes, every build |
-| `:2026-07-26` | yes — two builds on the same day overwrite it |
+| `:<date>` | yes — two builds on the same day overwrite it |
 | `:<sha>` | yes — the scheduled rebuild reuses the same commit |
-| **`:2026-07-26.7.1`** (date + run number + attempt) | **no — pin this** |
+| **`:<date>.<run>.<attempt>`** — the *build id* | **no — pin this** |
 
-Tags shown are examples; the current list is on the
-[package page](https://github.com/ryanlewis/exeslim/pkgs/container/exeslim).
+A build id looks like `2026-07-26.20.1`. The current list is on the
+[package page](https://github.com/ryanlewis/exeslim/pkgs/container/exeslim);
+this README quotes the *format* rather than a specific id on purpose, since a
+docs-only commit publishes a new build and would immediately stale it.
 
 ```sh
-ssh exe.dev new --name=my-service --image=ghcr.io/ryanlewis/exeslim:2026-07-26.7.1
+ssh exe.dev new --name=my-service --image=ghcr.io/ryanlewis/exeslim:<build-id>
 ```
 
 Or pin the digest, which is immutable by construction:
@@ -178,7 +185,7 @@ keep the package private, pass a token with `read:packages`:
 
 ```sh
 ssh exe.dev new --name=my-service \
-  --image=ghcr.io/ryanlewis/exeslim:2026-07-26.7.1 \
+  --image=ghcr.io/ryanlewis/exeslim:<build-id> \
   --registry-auth='"ryanlewis:ghp_yourtoken"'
 ```
 
