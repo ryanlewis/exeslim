@@ -19,6 +19,19 @@ permissions:
   contents: read
   packages: write
 
+# Serialise publishes so the newest merge is the one that ends up on :latest.
+# Merging several PRs at once starts overlapping builds, and without this a
+# slower final build can be overwritten by an earlier one — leaving :latest
+# pointing at an intermediate commit. Observed: five merges, five concurrent
+# builds, correct only by luck of finish order.
+#
+# cancel-in-progress is deliberately false. Cancelling would abandon a build
+# that had already published its immutable :<date>.<run>.<attempt> tag, and
+# those are the tags people pin.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
 jobs:
   build:
     runs-on: ubuntu-latest
