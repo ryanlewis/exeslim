@@ -29,9 +29,14 @@ the difference between comfortable and cramped.
 
 ## What's in it
 
-`systemd` + `systemd-sysv` + `dbus`, `ca-certificates`, `curl`, `sudo`,
-`tzdata`, `locales`, and an `exedev` user at uid 1000 with passwordless sudo —
-matching exeuntu so existing deploy scripts keep working.
+`systemd` + `systemd-sysv` + `dbus`, `ca-certificates`, `curl`, `iproute2`,
+`sudo`, `tzdata`, `locales`, and an `exedev` user at uid 1000 with passwordless
+sudo — matching exeuntu so existing deploy scripts keep working.
+
+`iproute2` earns its ~1 MB: when a unit is `active` but the HTTPS proxy returns
+nothing, `ss -tlnp` immediately distinguishes a service bound to `0.0.0.0:8000`
+(reachable by the proxy) from one bound to `127.0.0.1:8000` (not). On a box with
+no toolchain that is the difference between one command and guesswork.
 
 Deliberately absent: compiler, python, docker, Go, node, any editor. If you need
 those on the box, you want `exeuntu`, not this.

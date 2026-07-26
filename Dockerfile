@@ -21,6 +21,10 @@ RUN apt-get update \
 	&& DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
 		systemd systemd-sysv dbus dbus-user-session \
 		ca-certificates curl \
+		# iproute2 for `ss`. ~1 MB, and it is the difference between seeing
+		# and guessing when a unit is active but the proxy returns nothing —
+		# 0.0.0.0:8000 (proxy can reach it) vs 127.0.0.1:8000 (it cannot).
+		iproute2 \
 		sudo tzdata locales \
 	# en_US + en_GB only; exeuntu installs locales-all, which is ~200 MB.
 	# en_US.UTF-8 is the default as the least surprising for anyone else who
