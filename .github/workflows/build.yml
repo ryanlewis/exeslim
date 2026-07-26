@@ -28,6 +28,13 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      # exe.dev caches mutable tags — a VM created shortly after a push can be
+      # served a stale `:latest`. The scheduled rebuild also reuses the same
+      # commit, so `:<sha>` is not immutable across weekly builds either. The
+      # date tag is the one that uniquely identifies a given build.
+      - id: tag
+        run: echo "date=$(date -u +%Y-%m-%d)" >> "$GITHUB_OUTPUT"
+
       - uses: docker/build-push-action@v6
         with:
           context: .
@@ -35,6 +42,7 @@ jobs:
           push: true
           tags: |
             ghcr.io/ryanlewis/exeslim:latest
+            ghcr.io/ryanlewis/exeslim:${{ steps.tag.outputs.date }}
             ghcr.io/ryanlewis/exeslim:${{ github.sha }}
           # exe.dev reads image metadata (Cmd, Labels, ExposedPorts) directly.
           # Provenance/SBOM turn the push into an attestation manifest list,

@@ -101,7 +101,25 @@ supervision. Since every service here is a systemd unit, systemd is required.
 ## Usage
 
 ```sh
-ssh exe.dev new --name=my-service --image=ghcr.io/ryanlewis/exeslim:latest
+ssh exe.dev new --name=my-service --image=ghcr.io/ryanlewis/exeslim:2026-07-26
+```
+
+### Don't use `:latest`
+
+**exe.dev caches mutable tags.** A VM created shortly after a push can be served
+the *previous* `:latest`. This was observed, not theorised: a VM built minutes
+after a push came up without a newly added package, while the same build's
+immutable tag had it — and both tags resolved to an identical digest at the
+registry, so the stale copy came from exe.dev's side.
+
+Every build is therefore also tagged with a UTC date (`:2026-07-26`) and the
+commit sha. Prefer the date tag: the weekly rebuild runs on the *same commit*,
+so `:<sha>` is not immutable across scheduled builds — only the date tag
+uniquely identifies a build. For absolute certainty, pin the digest:
+
+```sh
+ssh exe.dev new --name=my-service \
+  --image=ghcr.io/ryanlewis/exeslim@sha256:<digest>
 ```
 
 If the package is private, pass a token with `read:packages`:
