@@ -183,5 +183,22 @@ LABEL "exe.dev/login-user"="exedev"
 # Add this if you want Shelley (and `new --prompt`) on VMs from this image:
 # LABEL "exe.dev/install-shelley"="true"
 
+# --- OCI metadata -------------------------------------------------------------
+# Declared here, at the end, on purpose: an ARG invalidates the build cache from
+# the point it is *used*, so keeping it below the apt layers means a new BUILD_ID
+# does not trigger a full rebuild.
+#
+# `org.opencontainers.image.version` in particular must be set: ubuntu:24.04 ships
+# that label as "24.04" and it is inherited, so without an override every scanner
+# and `docker inspect` reports this image's version as Ubuntu's.
+ARG BUILD_ID=dev
+LABEL org.opencontainers.image.title="exeslim" \
+	org.opencontainers.image.description="Minimal exe.dev base image for deployment targets: systemd and full platform wiring, without the agent workstation toolchain." \
+	org.opencontainers.image.source="https://github.com/ryanlewis/exeslim" \
+	org.opencontainers.image.url="https://github.com/ryanlewis/exeslim" \
+	org.opencontainers.image.licenses="MIT" \
+	org.opencontainers.image.base.name="docker.io/library/ubuntu:24.04" \
+	org.opencontainers.image.version="${BUILD_ID}"
+
 WORKDIR /home/exedev
 CMD ["/usr/local/bin/init"]
