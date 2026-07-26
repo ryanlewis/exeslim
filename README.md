@@ -4,7 +4,7 @@ A minimal [exe.dev](https://exe.dev) base image for **deployment targets** — V
 that run one service and are never developed on.
 
 ```sh
-ssh exe.dev new --name=my-service --image=ghcr.io/ryanlewis/exeslim:2026-07-26.8.1
+ssh exe.dev new --name=my-service --image=ghcr.io/ryanlewis/exeslim:2026-07-26.7.1
 ```
 
 ## Why
@@ -155,10 +155,13 @@ Each build publishes four tags. Only one of them is immutable:
 | `:latest` | yes, every build |
 | `:2026-07-26` | yes — two builds on the same day overwrite it |
 | `:<sha>` | yes — the scheduled rebuild reuses the same commit |
-| **`:2026-07-26.8.1`** (date + run number + attempt) | **no — pin this** |
+| **`:2026-07-26.7.1`** (date + run number + attempt) | **no — pin this** |
+
+Tags shown are examples; the current list is on the
+[package page](https://github.com/ryanlewis/exeslim/pkgs/container/exeslim).
 
 ```sh
-ssh exe.dev new --name=my-service --image=ghcr.io/ryanlewis/exeslim:2026-07-26.8.1
+ssh exe.dev new --name=my-service --image=ghcr.io/ryanlewis/exeslim:2026-07-26.7.1
 ```
 
 Or pin the digest, which is immutable by construction:
@@ -175,7 +178,7 @@ keep the package private, pass a token with `read:packages`:
 
 ```sh
 ssh exe.dev new --name=my-service \
-  --image=ghcr.io/ryanlewis/exeslim:2026-07-26.8.1 \
+  --image=ghcr.io/ryanlewis/exeslim:2026-07-26.7.1 \
   --registry-auth='"ryanlewis:ghp_yourtoken"'
 ```
 
