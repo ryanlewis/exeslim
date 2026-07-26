@@ -9,12 +9,12 @@
   "pinDigests": true,
   "packageRules": [
     {
-      "matchUpdateTypes": ["minor", "patch"],
+      "matchUpdateTypes": ["minor", "patch", "digest", "pin", "pinDigest"],
       "groupName": "all non-major dependencies",
       "groupSlug": "all-minor-patch"
     },
     {
-      "description": "Stay on Ubuntu LTS. Renovate would otherwise offer 24.10 / 25.04, which are 9-month interim releases — moving to one silently drops this image off LTS support. Digest updates still flow (they are updateType 'digest'), so the base layer stays current; the every-two-years LTS bump is a deliberate human decision.",
+      "description": "Belt-and-braces LTS guard. Renovate's ubuntu versioning already treats only LTS releases as stable, so interim releases like 24.10 should not be offered anyway — this makes that explicit and survives a default changing. Digest updates still flow (updateType 'digest'), so the base layer stays current; the every-two-years LTS bump stays a deliberate human decision.",
       "matchDatasources": ["docker"],
       "matchPackageNames": ["ubuntu"],
       "matchUpdateTypes": ["major", "minor"],

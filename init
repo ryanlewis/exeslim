@@ -17,16 +17,22 @@ if [[ ! -f /sys/fs/cgroup/cgroup.controllers ]]; then
 	mount -t cgroup2 none /sys/fs/cgroup
 fi
 
+# Kata containers mount this readonly by default. exeuntu does this remount
+# *after* the sysctl writes below, which works only because /proc/sys happens
+# to be writable on the current runtime (verified: ip_unprivileged_port_start
+# is 0 on live VMs, and services running as exedev do bind :80). Do it first
+# regardless — if /proc/sys ever arrives read-only, the `-w` guards below
+# would silently skip and low-port binding would break with no error.
+mount -o remount,rw /proc/sys 2>/dev/null || true
+
 # Let unprivileged services bind :80/:443 directly.
 if [[ -w /proc/sys/net/ipv4/ip_unprivileged_port_start ]]; then
 	printf '0\n' >/proc/sys/net/ipv4/ip_unprivileged_port_start
 fi
+# Absent entirely on VMs without IPv6 sysctls; the guard handles that.
 if [[ -w /proc/sys/net/ipv6/ip_unprivileged_port_start ]]; then
 	printf '0\n' >/proc/sys/net/ipv6/ip_unprivileged_port_start
 fi
-
-# Kata containers mount this readonly by default.
-mount -o remount,rw /proc/sys 2>/dev/null || true
 
 echo "Starting systemd..."
 exec /sbin/init --log-target=syslog --show-status=true

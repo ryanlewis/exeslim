@@ -4,7 +4,7 @@ A minimal [exe.dev](https://exe.dev) base image for **deployment targets** — V
 that run one service and are never developed on.
 
 ```sh
-ssh exe.dev new --name=my-service --image=ghcr.io/ryanlewis/exeslim:2026-07-26
+ssh exe.dev new --name=my-service --image=ghcr.io/ryanlewis/exeslim:2026-07-26.8.1
 ```
 
 ## Why
@@ -122,9 +122,16 @@ in populating the XDG runtime dir sockets.
 ## How it boots
 
 exe.dev runs the image's `Cmd` as PID 1. `/usr/local/bin/init` mirrors exeuntu's
-own wrapper: create `/run/systemd`, mount cgroup2 if absent, set
-`ip_unprivileged_port_start=0` so unprivileged services can bind low ports,
-remount `/proc/sys` rw, then `exec /sbin/init`.
+own wrapper: create `/run/systemd`, mount cgroup2 if absent, remount `/proc/sys`
+rw, set `ip_unprivileged_port_start=0` so unprivileged services can bind low
+ports, then `exec /sbin/init`.
+
+One deliberate divergence: exeuntu does that remount *after* the sysctl writes.
+That works only because `/proc/sys` happens to be writable on the current
+runtime — verified, `ip_unprivileged_port_start` is `0` on live VMs and services
+running as `exedev` do bind `:80`. Ordering the remount first means that if
+`/proc/sys` ever arrives read-only, the writes still land instead of being
+silently skipped by their `-w` guards.
 
 Without that wrapper you get exe.dev's fallback (`/exe.dev/etc/init-style` reads
 `metadata`), which runs the image `Cmd` under `exe-init` — a bare PID 1 with no
@@ -148,10 +155,10 @@ Each build publishes four tags. Only one of them is immutable:
 | `:latest` | yes, every build |
 | `:2026-07-26` | yes — two builds on the same day overwrite it |
 | `:<sha>` | yes — the scheduled rebuild reuses the same commit |
-| **`:2026-07-26.7`** (date + run number) | **no — pin this** |
+| **`:2026-07-26.8.1`** (date + run number + attempt) | **no — pin this** |
 
 ```sh
-ssh exe.dev new --name=my-service --image=ghcr.io/ryanlewis/exeslim:2026-07-26.7
+ssh exe.dev new --name=my-service --image=ghcr.io/ryanlewis/exeslim:2026-07-26.8.1
 ```
 
 Or pin the digest, which is immutable by construction:
@@ -168,7 +175,7 @@ keep the package private, pass a token with `read:packages`:
 
 ```sh
 ssh exe.dev new --name=my-service \
-  --image=ghcr.io/ryanlewis/exeslim:2026-07-26 \
+  --image=ghcr.io/ryanlewis/exeslim:2026-07-26.8.1 \
   --registry-auth='"ryanlewis:ghp_yourtoken"'
 ```
 
@@ -192,5 +199,7 @@ whatever Canonical last shipped, however often the job reran.
 
 Renovate keeps the GitHub Actions and the base image digest current
 (`renovate.json`). Ubuntu major/minor bumps are deliberately disabled so the
-image can't drift off LTS onto a 9-month interim release — that bump is a
+image can't drift off LTS onto an interim release — Renovate's ubuntu
+versioning already treats only LTS as stable, so this is belt-and-braces. That
+bump is a
 two-yearly human decision.

@@ -18,38 +18,43 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
-      - uses: docker/setup-buildx-action@v3
+      - uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3
 
-      - uses: docker/login-action@v3
+      - uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
       # exe.dev caches mutable tags — a VM created shortly after a push can be
-      # served a stale `:latest`. The scheduled rebuild also reuses the same
-      # commit, so `:<sha>` is not immutable across weekly builds either. The
-      # date tag is the one that uniquely identifies a given build.
-      # `<date>` alone is not immutable: two builds on the same day overwrite
-      # it (observed). `<date>.<run_number>` is unique per build and is the
-      # tag to pin.
+      # served a stale `:latest`, so publish something immutable to pin.
+      #
+      # Why the build id is date + run_number + run_attempt:
+      #   <date>        two builds on the same day overwrite it (observed)
+      #   <sha>         the scheduled rebuild reuses the same commit
+      #   <run_number>  stable across re-runs of the same run, so a re-run
+      #                 would overwrite the tag it is supposed to fix
+      #   <run_attempt> increments per re-run — this is what closes the gap
       - id: tag
-        run: echo "date=$(date -u +%Y-%m-%d)" >> "$GITHUB_OUTPUT"
+        run: |
+          {
+            echo "date=$(date -u +%Y-%m-%d)"
+            echo "build=$(date -u +%Y-%m-%d).${{ github.run_number }}.${{ github.run_attempt }}"
+          } >> "$GITHUB_OUTPUT"
 
-      - uses: docker/build-push-action@v6
+      - uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6
         with:
           context: .
           platforms: linux/amd64
           push: true
-          # Moving:   :latest, :<date>, :<sha> (the scheduled rebuild reuses
-          #           the same commit, so :<sha> moves too).
-          # Immutable: :<date>.<run_number>
+          # Moving:    :latest, :<date>, :<sha>
+          # Immutable: :<date>.<run_number>.<run_attempt>
           tags: |
             ghcr.io/ryanlewis/exeslim:latest
             ghcr.io/ryanlewis/exeslim:${{ steps.tag.outputs.date }}
-            ghcr.io/ryanlewis/exeslim:${{ steps.tag.outputs.date }}.${{ github.run_number }}
+            ghcr.io/ryanlewis/exeslim:${{ steps.tag.outputs.build }}
             ghcr.io/ryanlewis/exeslim:${{ github.sha }}
           # exe.dev reads image metadata (Cmd, Labels, ExposedPorts) directly.
           # Provenance/SBOM turn the push into an attestation manifest list,
