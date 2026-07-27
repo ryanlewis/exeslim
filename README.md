@@ -198,21 +198,72 @@ Want Shelley (and `new --prompt`) on these VMs? Uncomment
 
 ## Patching
 
-exe.dev VMs ship with the `apt-daily` timers masked, so nothing auto-patches.
-The weekly CI rebuild is the patch mechanism: recreate or rebase a VM to pick up
-a fresh build.
+Nothing on the VM patches itself. This image masks `apt-daily.timer`,
+`apt-daily-upgrade.timer` and `unattended-upgrades.service` (mirroring exeuntu),
+and `unattended-upgrades` is not installed at all. Whether a box that exists to
+run one service should reboot-and-upgrade on its own is a decision for whoever
+owns that service, not for the base image.
 
-The build runs `apt-get dist-upgrade` before installing anything. That matters
-more here than it looks: this image installs only a handful of packages by name,
-so without a dist-upgrade every *other* package in the base layer would sit at
-whatever Canonical last shipped, however often the job reran.
+What the weekly rebuild (Mondays, 04:00 UTC) buys you is a *fresh* VM that
+starts patched. The build runs `apt-get dist-upgrade` before installing
+anything, which matters more here than it looks: this image installs only a
+handful of packages by name, so without a dist-upgrade every *other* package in
+the base layer would sit at whatever Canonical last shipped, however often the
+job reran.
+
+That applies at creation and nowhere else. There is no way to move an existing
+VM onto a newer image: `ssh exe.dev` offers `new`, `rm`, `restart`, `cp` and
+`resize`, and none of them swap the image under a live VM (`cp` clones the
+disk you already have). Once a VM exists, its packages are yours to maintain.
+Since the payload here is normally a prebuilt binary and a unit file, replacing
+a VM with a fresh one *is* viable — but it is a redeploy you choose to do, not
+an upgrade path the platform gives you.
+
+### Keeping a long-lived VM current
+
+By hand:
+
+```sh
+sudo apt-get update && sudo apt-get dist-upgrade
+```
+
+Or opt in to unattended upgrades. **Unmask before installing** — dpkg cannot
+enable a masked unit, so installing first leaves all three units masked with
+`Failed to enable unit: ... is masked` buried in the apt output:
+
+```sh
+sudo systemctl unmask apt-daily.timer apt-daily-upgrade.timer unattended-upgrades.service
+sudo apt-get update && sudo apt-get install -y unattended-upgrades
+sudo systemctl start apt-daily.timer apt-daily-upgrade.timer
+```
+
+That last line is not redundant. Installing the package *enables* both timers
+but leaves them inactive in the running system — `systemctl list-timers` shows
+them with no next elapse until they are started or the VM is restarted, which
+looks exactly like working automatic patching while doing nothing. Confirm it
+actually armed:
+
+```sh
+systemctl list-timers 'apt-daily*'
+sudo unattended-upgrade --dry-run --verbose
+```
+
+The stock allowed origins are `noble` and `noble-security`, which is the right
+default for a deployment target: security fixes, no surprise version jumps.
+
+There is no kernel to patch. exe.dev supplies it — `uname -r` reports 6.12.x
+rather than Noble's 6.8 — and no `linux-image` package is installed, so
+`/var/run/reboot-required` never shows up from a kernel update. A restart is
+only needed to move long-running processes onto a patched libc or openssl:
+restart the unit, or `ssh exe.dev restart <vm>`.
+
+### Keeping the image current
 
 Renovate keeps the GitHub Actions and the base image digest current
 (`renovate.json`). Ubuntu major/minor bumps are deliberately disabled so the
 image can't drift off LTS onto an interim release — Renovate's ubuntu
 versioning already treats only LTS as stable, so this is belt-and-braces. That
-bump is a
-two-yearly human decision.
+bump is a two-yearly human decision.
 
 Dependency PRs build without publishing — the workflow runs on `pull_request`
 but only pushes tags from `main`. A digest bump or a major Actions bump
