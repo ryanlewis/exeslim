@@ -83,10 +83,10 @@ jobs:
           # Moving:    :latest, :<date>, :<sha>
           # Immutable: :<date>.<run_number>.<run_attempt>
           tags: |
-            ghcr.io/ryanlewis/exeslim:latest
-            ghcr.io/ryanlewis/exeslim:${{ steps.tag.outputs.date }}
-            ghcr.io/ryanlewis/exeslim:${{ steps.tag.outputs.build }}
-            ghcr.io/ryanlewis/exeslim:${{ github.sha }}
+            ghcr.io/${{ github.repository_owner }}/exeslim:latest
+            ghcr.io/${{ github.repository_owner }}/exeslim:${{ steps.tag.outputs.date }}
+            ghcr.io/${{ github.repository_owner }}/exeslim:${{ steps.tag.outputs.build }}
+            ghcr.io/${{ github.repository_owner }}/exeslim:${{ github.sha }}
           # exe.dev reads image metadata (Cmd, Labels, ExposedPorts) directly.
           # Provenance/SBOM turn the push into an attestation manifest list,
           # which can hide that metadata from a plain OCI pull.
