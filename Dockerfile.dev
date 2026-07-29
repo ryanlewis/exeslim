@@ -44,11 +44,26 @@ FROM ${BASE}
 
 SHELL ["/bin/bash", "-euxo", "pipefail", "-c"]
 
+#   libyaml-0-2  apex links against libyaml-0.so.2. exeuntu has it; exeslim does
+#                not, so `apex --version` died with "error while loading shared
+#                libraries" AFTER its checksum passed — provisioning reported the
+#                download OK and then aborted. Found on the 2026-07-29 canary; an
+#                ldd sweep over every provisioned binary showed apex is the only
+#                one with an unsatisfied link.
 RUN apt-get update \
 	&& DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
-		git jq unzip \
+		git jq unzip libyaml-0-2 \
 	&& apt-get clean \
 	&& rm -rf /var/lib/apt/lists/*
+
+# exeuntu sets this as an image ENV, so an SSH session inherits it and
+# `systemctl --user` works. Without it every such call fails with "Failed to
+# connect to bus: No medium found" even though the user manager is active, the
+# linger flag is set and /run/user/1000/bus exists — the socket is there, the
+# client just has no address for it. Measured on the canary: DBUS was set on
+# exeuntu VMs and unset here, and that single difference broke provisioning.
+# uid 1000 is fixed: exedev is uid 1000 in both images by design.
+ENV DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/1000/bus
 
 # Shelley. The base leaves this commented out and exposes 8000 alone, with the
 # comment "exeuntu exposes 8000 and 9999, the latter being Shelley's. We have no
