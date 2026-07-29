@@ -1,0 +1,82 @@
+# exeslim-dev — exeslim plus the minimum a DEV VM needs.
+#
+# A separate file, layered on top of the published exeslim image, rather than
+# edits to Dockerfile. Two reasons:
+#
+#   1. FORK.md commits to near-zero divergence from upstream so `git merge
+#      upstream/main` stays clean. Dev packages in the shared Dockerfile would
+#      break that on every upstream bump.
+#   2. rss-feed (and the deployment lane generally) builds from exeslim. It has
+#      no business carrying git or a Shelley binary — it is public-facing, and
+#      "no toolchain" is half of why it exists.
+#
+# What this adds, and why each item is here rather than in a script:
+#
+#   git    provision-iv.sh and dotfiles are both cloned onto the box, so the
+#          bootstrap cannot start without it. Chicken-and-egg: a script cannot
+#          install the thing needed to fetch the script.
+#   jq     provision-iv.sh reads agentsview's version and /exe.dev/etc/image.conf
+#          through it.
+#   unzip  provision-iv.sh unpacks duckdb, rclone (and aws, when installed on
+#          demand) from zips. `tar` is Essential in Ubuntu and already present.
+#
+# Deliberately NOT added — these belong to the scripts, not the image, because
+# they are version-pinned and volatile, and exe.dev fixes a VM's image at
+# creation with no way to move a live VM onto a newer one. Baking them would
+# turn every version bump into a fleet recreate, and would save nothing: usage
+# is each VM's own ext4 with no cross-VM dedup, so a binary in an image layer
+# costs the same bytes as one in ~/.local/bin.
+#
+#   uv, node, python tooling   -> dotfiles install.sh
+#   duckdb, quarto, tigris,    -> iv-image provision-iv.sh (pinned + checksummed)
+#   rclone, herdr, agentsview,
+#   apex
+#   claude, codex              -> dotfiles install.sh. Pointedly NOT baked:
+#                                 exeuntu ships these and its copies go stale at
+#                                 whatever the base rebuild froze, then sit
+#                                 shadowed by the current ones in ~/.local/bin.
+#                                 Measured 2026-07-28: 2.0 GB of stale, shadowed
+#                                 duplicates fleet-wide. Not shipping them is
+#                                 the fix.
+#   tailscale                  -> dotfiles install.sh (Linux path)
+ARG BASE=ghcr.io/kylelundstedt/exeslim:latest
+FROM ${BASE}
+
+SHELL ["/bin/bash", "-euxo", "pipefail", "-c"]
+
+RUN apt-get update \
+	&& DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+		git jq unzip \
+	&& apt-get clean \
+	&& rm -rf /var/lib/apt/lists/*
+
+# Shelley. The base leaves this commented out and exposes 8000 alone, with the
+# comment "exeuntu exposes 8000 and 9999, the latter being Shelley's. We have no
+# Shelley, so 8000 alone." A dev VM does want Shelley, so BOTH are needed:
+# the label makes exe.dev install the binary and light up the UI, and EXPOSE
+# 9999 is what exeuntu publishes for it. Setting the label without the port
+# would install Shelley and leave <vm>.shelley.exe.xyz unrouted.
+#
+# ExposedPorts and LABELs are inherited from the base, so 8000 and
+# exe.dev/login-user=exedev carry over; these are additive.
+EXPOSE 9999
+LABEL "exe.dev/install-shelley"="true"
+
+# NOT carried over from exeuntu, and worth knowing before adopting this:
+#
+#   /headless-shell   Shelley's browser (252 MB on exeuntu). exe.dev's
+#                     install-shelley label installs the Shelley binary; whether
+#                     the browser comes with it is UNVERIFIED. If it does not,
+#                     browser-driven Shelley work needs it installing on demand.
+#   EXEUNTU=1         absent, so anything branching on it sees a non-exeuntu box.
+#   /exe.dev/etc/image.conf
+#                     absent, so provision-iv.sh's lock file records
+#                     exeuntu_image_revision=unknown. Provenance only.
+ARG BUILD_ID=dev
+LABEL org.opencontainers.image.title="exeslim-dev" \
+	org.opencontainers.image.description="exeslim plus git/jq/unzip and Shelley, for exe.dev development VMs. Version-pinned tooling stays in provision-iv.sh and dotfiles." \
+	org.opencontainers.image.source="https://github.com/kylelundstedt/exeslim" \
+	org.opencontainers.image.version="${BUILD_ID}"
+
+WORKDIR /home/exedev
+CMD ["/usr/local/bin/init"]

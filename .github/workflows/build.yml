@@ -92,3 +92,32 @@ jobs:
           # which can hide that metadata from a plain OCI pull.
           provenance: false
           sbom: false
+
+      # exeslim-dev: the same platform wiring plus git/jq/unzip and Shelley, for
+      # development VMs. Built FROM the immutable build id just published, so the
+      # dev image is always a known slim image plus one layer — never a moving
+      # :latest resolved at some other time.
+      #
+      # Skipped on PRs for the same reason as the login step: nothing was pushed,
+      # so the BASE tag this FROMs does not exist yet.
+      - if: github.event_name != 'pull_request'
+        uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7
+        with:
+          context: .
+          file: Dockerfile.dev
+          platforms: linux/amd64
+          push: true
+          build-args: |
+            BASE=ghcr.io/${{ github.repository_owner }}/exeslim:${{ steps.tag.outputs.build }}
+            BUILD_ID=${{ steps.tag.outputs.build }}
+          labels: |
+            org.opencontainers.image.revision=${{ github.sha }}
+            org.opencontainers.image.created=${{ steps.tag.outputs.created }}
+          tags: |
+            ghcr.io/${{ github.repository_owner }}/exeslim-dev:latest
+            ghcr.io/${{ github.repository_owner }}/exeslim-dev:${{ steps.tag.outputs.date }}
+            ghcr.io/${{ github.repository_owner }}/exeslim-dev:${{ steps.tag.outputs.build }}
+            ghcr.io/${{ github.repository_owner }}/exeslim-dev:${{ github.sha }}
+          provenance: false
+          sbom: false
+
