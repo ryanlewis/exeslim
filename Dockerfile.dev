@@ -19,6 +19,15 @@
 #          through it.
 #   unzip  provision-iv.sh unpacks duckdb, rclone (and aws, when installed on
 #          demand) from zips. `tar` is Essential in Ubuntu and already present.
+#   openssh-client
+#          NOT the same thing as openssh-server, which exeslim omits on purpose
+#          because exe.dev injects a static sshd. Verified on iv-docs 2026-07-29:
+#          /exe.dev/bin holds dtach, exe-init, sftp-server, sh, sshd and
+#          sshd-session — inbound only, no client. exeuntu happened to ship one
+#          via Ubuntu, so nothing noticed. Both dotfiles' install.sh and
+#          provision-iv.sh write VM-to-VM ssh stanzas (tailnet short names,
+#          *.exe.xyz), which are dead config on a box that cannot dial out.
+#          ~2 MB.
 #
 # Deliberately NOT added — these belong to the scripts, not the image, because
 # they are version-pinned and volatile, and exe.dev fixes a VM's image at
@@ -52,7 +61,7 @@ SHELL ["/bin/bash", "-euxo", "pipefail", "-c"]
 #                one with an unsatisfied link.
 RUN apt-get update \
 	&& DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
-		git jq unzip libyaml-0-2 \
+		git jq unzip libyaml-0-2 openssh-client \
 	&& apt-get clean \
 	&& rm -rf /var/lib/apt/lists/*
 
@@ -96,10 +105,10 @@ RUN systemctl enable shelley.socket
 #                     also ships shelley.socket (ListenStream=127.0.0.1:9999)
 #                     and shelley.service (Type=exec, -systemd-activation,
 #                     -require-header X-Exedev-Userid), and the label creates
-#                     neither. Vendoring them here would work, but they are
-#                     undocumented platform internals for a product exe.dev
-#                     ships continuously — a stale copy would fail silently.
-#                     OPEN DECISION; see dotfiles agent_docs/exe-dev-remediation.md.
+#                     neither. RESOLVED: this image supplies its own pair (see
+#                     the COPY above), written against `shelley serve -h` rather
+#                     than copied from exeuntu, so a Shelley release cannot
+#                     silently strand a vendored copy of platform internals.
 #   /headless-shell   ABSENT (confirmed). Shelley's browser, 252 MB on exeuntu,
 #                     and shelley.service puts it first on PATH. Browser-driven
 #                     Shelley work needs it installed on demand.
