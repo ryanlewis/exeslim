@@ -77,6 +77,18 @@ ENV DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/1000/bus
 EXPOSE 9999
 LABEL "exe.dev/install-shelley"="true"
 
+# The label installs the binary and lights up the UI. It does NOT run Shelley —
+# verified on the 2026-07-29 canary: binary present, <vm>.shelley.exe.xyz
+# routing, and nothing listening on 9999. exeuntu supplies its own
+# shelley.socket/shelley.service; a custom image must supply equivalents.
+#
+# These are written against `shelley serve -h` — the vendor's documented CLI —
+# rather than copied from exeuntu, so they stay maintainable when exe.dev ships
+# a new Shelley. Socket activation is not decoration: it is what keeps the
+# listener on 127.0.0.1, since `-port 9999` binds *:9999.
+COPY shelley.socket shelley.service /etc/systemd/system/
+RUN systemctl enable shelley.socket
+
 # Measured on the 2026-07-29 canary — replacing what were guesses:
 #
 #   Shelley binary    INSTALLED by the label (31 MB, /usr/local/bin/shelley) and

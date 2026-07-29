@@ -1,0 +1,15 @@
+[Unit]
+Description=Shelley socket
+Documentation=https://exe.dev/docs/shelley/intro
+
+# Loopback ONLY, deliberately. `shelley serve -port 9999` would bind *:9999 —
+# verified on the 2026-07-29 canary — and these VMs sit behind a public HTTPS
+# proxy. Socket activation is what lets systemd own the bind address, so the
+# process never gets the chance to listen more widely. exe.dev's proxy reaches
+# 127.0.0.1:9999 from inside the VM; nothing else should.
+[Socket]
+ListenStream=127.0.0.1:9999
+Accept=no
+
+[Install]
+WantedBy=sockets.target

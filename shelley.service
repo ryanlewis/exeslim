@@ -1,0 +1,52 @@
+[Unit]
+Description=Shelley-the-Agent
+Documentation=https://exe.dev/docs/shelley/intro
+BindsTo=shelley.socket
+After=shelley.socket
+# exe.dev installs the binary at VM creation, driven by
+# LABEL exe.dev/install-shelley=true. If that label is ever dropped, the unit
+# stays inert instead of failing on every boot.
+ConditionPathExists=/usr/local/bin/shelley
+
+[Service]
+Type=exec
+User=exedev
+Group=exedev
+WorkingDirectory=/home/exedev
+
+# Every flag here comes from `shelley serve -h`, i.e. the vendor's own
+# documented CLI — not copied from exeuntu's internals. That is the difference
+# between a unit we can maintain and a snapshot that rots silently when exe.dev
+# ships a new Shelley.
+#
+#   -systemd-activation  take the listening fd from shelley.socket. This is what
+#                        keeps the bind on 127.0.0.1: `-port 9999` binds *:9999
+#                        (verified 2026-07-29), which on a VM behind a public
+#                        HTTPS proxy is not what we want.
+#   -require-header      exe.dev's proxy injects X-Exedev-Userid; requiring it
+#                        means a request that bypasses the proxy is rejected.
+#   -config              platform-injected, present on every VM including
+#                        custom-image ones (verified).
+ExecStart=/usr/local/bin/shelley \
+  -db /home/exedev/.config/shelley/shelley.db \
+  -config /exe.dev/shelley.json \
+  serve -systemd-activation -require-header X-Exedev-Userid
+
+Restart=on-failure
+RestartSec=5
+Environment=HOME=/home/exedev
+Environment=USER=exedev
+# exeuntu prefixes PATH with /headless-shell, its bundled Chrome. This image
+# does not ship it (252 MB), so browser-driven Shelley work needs it installed
+# on demand; the rest of Shelley is unaffected.
+Environment=PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+KillMode=process
+TimeoutStopSec=10
+OOMScoreAdjust=-1
+
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=shelley
+
+[Install]
+WantedBy=multi-user.target
