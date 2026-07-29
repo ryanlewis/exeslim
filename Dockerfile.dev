@@ -77,16 +77,26 @@ ENV DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/1000/bus
 EXPOSE 9999
 LABEL "exe.dev/install-shelley"="true"
 
-# NOT carried over from exeuntu, and worth knowing before adopting this:
+# Measured on the 2026-07-29 canary — replacing what were guesses:
 #
-#   /headless-shell   Shelley's browser (252 MB on exeuntu). exe.dev's
-#                     install-shelley label installs the Shelley binary; whether
-#                     the browser comes with it is UNVERIFIED. If it does not,
-#                     browser-driven Shelley work needs it installing on demand.
+#   Shelley binary    INSTALLED by the label (31 MB, /usr/local/bin/shelley) and
+#                     <vm>.shelley.exe.xyz routes. But it DOES NOT RUN: exeuntu
+#                     also ships shelley.socket (ListenStream=127.0.0.1:9999)
+#                     and shelley.service (Type=exec, -systemd-activation,
+#                     -require-header X-Exedev-Userid), and the label creates
+#                     neither. Vendoring them here would work, but they are
+#                     undocumented platform internals for a product exe.dev
+#                     ships continuously — a stale copy would fail silently.
+#                     OPEN DECISION; see dotfiles agent_docs/exe-dev-remediation.md.
+#   /headless-shell   ABSENT (confirmed). Shelley's browser, 252 MB on exeuntu,
+#                     and shelley.service puts it first on PATH. Browser-driven
+#                     Shelley work needs it installed on demand.
 #   EXEUNTU=1         absent, so anything branching on it sees a non-exeuntu box.
 #   /exe.dev/etc/image.conf
-#                     absent, so provision-iv.sh's lock file records
-#                     exeuntu_image_revision=unknown. Provenance only.
+#                     PRESENT, and better than expected: provision-iv.sh's lock
+#                     file recorded exeuntu_image_revision as THIS repo's commit
+#                     sha, so build provenance survives rather than degrading to
+#                     "unknown".
 ARG BUILD_ID=dev
 LABEL org.opencontainers.image.title="exeslim-dev" \
 	org.opencontainers.image.description="exeslim plus git/jq/unzip and Shelley, for exe.dev development VMs. Version-pinned tooling stays in provision-iv.sh and dotfiles." \
