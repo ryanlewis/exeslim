@@ -19,6 +19,16 @@
 #          through it.
 #   unzip  provision-iv.sh unpacks duckdb, rclone (and aws, when installed on
 #          demand) from zips. `tar` is Essential in Ubuntu and already present.
+#   nginx-light
+#          provision-docsite serves a rendered _site on :8000 (the exe.dev proxy
+#          port) with nginx, and its own comment says it "uses the nginx already
+#          in the exeuntu base image". exeslim drops nginx on purpose — correct
+#          for a deployment VM running one static binary, wrong for a dev VM
+#          whose job IS serving a doc site. Leaving it out took every doc site
+#          dark at cutover: exe.dev's own error page reads "Port 8000 unbound …
+#          to start nginx, run …", and nothing in verify noticed. -light, not
+#          full nginx: no mail/stream modules. Measured: no change in `df -h /`
+#          at 0.1 GB resolution.
 #   openssh-client
 #          NOT the same thing as openssh-server, which exeslim omits on purpose
 #          because exe.dev injects a static sshd. Verified on iv-docs 2026-07-29:
@@ -61,7 +71,7 @@ SHELL ["/bin/bash", "-euxo", "pipefail", "-c"]
 #                one with an unsatisfied link.
 RUN apt-get update \
 	&& DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
-		git jq unzip libyaml-0-2 openssh-client \
+		git jq unzip libyaml-0-2 openssh-client nginx-light \
 	&& apt-get clean \
 	&& rm -rf /var/lib/apt/lists/*
 
