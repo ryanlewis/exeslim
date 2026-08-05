@@ -1,18 +1,7 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
-  "extends": ["config:recommended", ":dependencyDashboard"],
-  "schedule": ["before 6am on monday"],
-  "prHourlyLimit": 0,
-  "prConcurrentLimit": 0,
-  "timezone": "Europe/London",
-  "minimumReleaseAge": "7 days",
-  "pinDigests": true,
+  "extends": ["github>ryanlewis/renovate-config"],
   "packageRules": [
-    {
-      "matchUpdateTypes": ["minor", "patch", "digest", "pin", "pinDigest"],
-      "groupName": "all non-major dependencies",
-      "groupSlug": "all-minor-patch"
-    },
     {
       "description": "Belt-and-braces LTS guard. Renovate's ubuntu versioning already treats only LTS releases as stable, so interim releases like 24.10 should not be offered anyway — this makes that explicit and survives a default changing. Digest updates still flow (updateType 'digest'), so the base layer stays current; the every-two-years LTS bump stays a deliberate human decision.",
       "matchDatasources": ["docker"],
@@ -20,12 +9,5 @@
       "matchUpdateTypes": ["major", "minor"],
       "enabled": false
     }
-  ],
-  "vulnerabilityAlerts": {
-    "enabled": true,
-    "labels": ["security"],
-    "schedule": ["at any time"],
-    "minimumReleaseAge": "0 days"
-  },
-  "osvVulnerabilityAlerts": true
+  ]
 }
