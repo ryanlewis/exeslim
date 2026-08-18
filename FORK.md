@@ -16,16 +16,34 @@ Rationale, measurements, and the deployment-lane plan live in
 
 ## Divergence from upstream
 
-Deliberately near-zero, so upstream can be merged cleanly:
+Deliberately **additive**, so upstream can be merged cleanly. Nothing upstream
+owns is edited except one line:
 
 - `.github/workflows/build.yml` — publish tags use
   `ghcr.io/${{ github.repository_owner }}/exeslim` instead of a hardcoded
   `ghcr.io/ryanlewis/exeslim`. Owner-relative, so it is correct in either
-  namespace and is the one change worth offering back upstream.
+  namespace and is the one change worth offering back upstream. The same job also
+  gained a second build/push step for `exeslim-dev`.
+- `Dockerfile.dev` — the `exeslim-dev` image: exeslim plus the minimum a *dev* VM
+  needs (`git jq unzip libyaml-0-2 openssh-client nginx-light`),
+  `DBUS_SESSION_BUS_ADDRESS`, `EXPOSE 9999`, and
+  `LABEL exe.dev/install-shelley=true`. A separate file rather than edits to
+  `Dockerfile`, so this divergence cannot conflict on an upstream bump, and so the
+  deployment lane keeps a base with no toolchain and no Shelley.
+- `shelley.socket`, `shelley.service` — the label installs the Shelley binary but
+  does not run it; a custom image must supply its own units. Written against
+  `shelley serve -h` rather than copied from exeuntu.
 - This file.
 
-Everything else — `Dockerfile`, `init`, `exe-setup.service`,
-`tmpfiles-tmp.conf` — is upstream's, unmodified.
+Everything upstream owns — `Dockerfile`, `init`, `exe-setup.service`,
+`tmpfiles-tmp.conf`, `renovate.json` — is unmodified. Verify with
+`git diff upstream/main --stat`: every path listed there should be one of the
+above.
+
+Which image a VM should use, and why the volatile tooling stays in a script
+instead of either image, is documented in
+[`kylelundstedt/iv-provision`](https://github.com/kylelundstedt/iv-provision)
+(`README.md` → "Why a script, not a custom image", and `bootstrap.md`).
 
 ## Keeping current
 
