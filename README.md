@@ -9,8 +9,8 @@ ssh exe.dev new --name=my-service --image=ghcr.io/ryanlewis/exeslim:<build-id>
 
 Take `<build-id>` from the
 [package page](https://github.com/ryanlewis/exeslim/pkgs/container/exeslim) — it
-looks like `2026-07-26.20.1`. Don't use `:latest`;
-[here's why](#dont-use-latest).
+looks like `2026-07-26.20.1`. `:latest` works too, but exe.dev caches it for up
+to an hour — [picking a tag](#picking-a-tag).
 
 ## Why
 
@@ -145,22 +145,37 @@ is required.
 
 ## Usage
 
-### Don't use `:latest`
+### Picking a tag
 
-**exe.dev caches mutable tags.** A VM created shortly after a push can be served
-the *previous* `:latest`. This was observed, not theorised: a VM built minutes
-after a push came up without a newly added package, while the same build's
-immutable tag had it — and both tags resolved to an identical digest at the
-registry, so the stale copy came from exe.dev's side.
+The tag is read once, at `new`, and never again — the VM gets a disk copy of
+whatever it resolved to at that moment, and nothing re-pulls it (see
+[Patching](#patching)). So this isn't pinning in the lockfile sense, where the
+choice keeps applying. It's a one-shot answer to "which build does this VM start
+from".
+
+That makes `:latest` fine most of the time. The caveat is that **exe.dev caches
+mutable tags**, so "latest" can mean up to an hour old. Observed, not theorised:
+a VM built minutes after a push came up without a newly added package, while the
+same build's immutable tag had it — and both tags resolved to an identical digest
+at the registry, so the stale copy came from exe.dev's side.
+
+The TTLs are 1 hour for `latest`, `main` and `master`, and 24 hours for
+everything else. The tags that *look* specific are therefore cached longest: a
+mutable `:<date>` or `:<sha>` can serve yesterday's image for a full day.
 
 Each build publishes four tags. Only one of them is immutable:
 
-| Tag | Moves? |
-|---|---|
-| `:latest` | yes, every build |
-| `:<date>` | yes — two builds on the same day overwrite it |
-| `:<sha>` | yes — the scheduled rebuild reuses the same commit |
-| **`:<date>.<run>.<attempt>`** — the *build id* | **no — pin this** |
+| Tag | Moves? | Cached |
+|---|---|---|
+| `:latest` | yes, every build | 1 h |
+| `:<date>` | yes — two builds on the same day overwrite it | 24 h |
+| `:<sha>` | yes — the scheduled rebuild reuses the same commit | 24 h |
+| **`:<date>.<run>.<attempt>`** — the *build id* | **no** | 24 h, moot |
+
+Reach for the build id when you want a guarantee rather than an hour's slack:
+creating a VM to exercise a change you pushed minutes ago, or rebuilding a box
+on the same image as one that already exists. Otherwise `:latest` is the easier
+call.
 
 A build id looks like `2026-07-26.20.1`. The current list is on the
 [package page](https://github.com/ryanlewis/exeslim/pkgs/container/exeslim);
@@ -171,7 +186,7 @@ docs-only commit publishes a new build and would immediately stale it.
 ssh exe.dev new --name=my-service --image=ghcr.io/ryanlewis/exeslim:<build-id>
 ```
 
-Or pin the digest, which is immutable by construction:
+Or the digest, immutable by construction:
 
 ```sh
 ssh exe.dev new --name=my-service \
