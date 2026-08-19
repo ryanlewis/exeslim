@@ -45,6 +45,20 @@ instead of either image, is documented in
 [`kylelundstedt/iv-provision`](https://github.com/kylelundstedt/iv-provision)
 (`README.md` → "Why a script, not a custom image", and `bootstrap.md`).
 
+## Authoring boundary
+
+Changes to this fork originate on the **`iv-provision` VM**, the only host
+carrying the `repo-exeslim-rw` integration (it also holds `repo-iv-provision-rw`,
+so the two repos' pins can be bumped together). Land changes on `main` by pull
+request with CI green.
+
+This matters more here than in an ordinary repo: this image is the base layer of
+internet-facing VMs, and the reason the fork exists at all is to not depend on a
+build we do not control. A second uncontrolled writer would give back part of
+what forking bought. See `iv-provision`'s README ("Authoring boundary") for the
+full rationale and for what to do when an exception is genuinely needed — attach
+the writer deliberately, land the change, detach it again.
+
 ## Keeping current
 
 ```bash
