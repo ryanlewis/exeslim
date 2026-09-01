@@ -8,6 +8,15 @@
       "matchPackageNames": ["ubuntu"],
       "matchUpdateTypes": ["major", "minor"],
       "enabled": false
+    },
+    {
+      "description": "The base-image digest gets its own PR. The shared config batches it with the Actions pins, and every action release moved that branch under the reviewer (10 force-pushes in a month, only two of them Ubuntu). Canonical publishes a new 24.04 digest every two to four weeks; keeping it separate means a PR that only changes when Ubuntu does. The soak is short because this is an official image that has already been through Canonical's own pipeline (the dated tag is built days before it lands on Docker Hub), the Dockerfile dist-upgrades on top of it anyway, and it still builds on the PR and gets a human merge. No automerge: the shared config's last rule keeps digests manual, and this PR publishes :latest.",
+      "matchDatasources": ["docker"],
+      "matchPackageNames": ["ubuntu"],
+      "matchUpdateTypes": ["digest"],
+      "groupName": "ubuntu base image",
+      "groupSlug": "ubuntu-digest",
+      "minimumReleaseAge": "1 day"
     }
   ]
 }
