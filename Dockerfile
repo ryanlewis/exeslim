@@ -13,7 +13,7 @@
 # NOT for interactive/agent VMs — no compiler, no python, no docker, no git.
 # Use exeuntu for those.
 
-FROM ubuntu:24.04@sha256:4fbb8e6a8395de5a7550b33509421a2bafbc0aab6c06ba2cef9ebffbc7092d90
+FROM ubuntu:24.04@sha256:33ceb71981b602c1a7443a53469e4dba065f7503eab3078a2d7a57a2ab987517
 
 SHELL ["/bin/bash", "-euxo", "pipefail", "-c"]
 
