@@ -98,10 +98,11 @@ work on the running VM, which also confirms the `policy-rc.d` removal.
 ### Setup scripts run on every boot
 
 `exe-setup.service` deletes `/exe.dev/setup` after a successful run, but exe.dev
-writes the file back into the VM on every boot. The unit's
-`ConditionPathExists` then passes again and the script runs again. This is
-platform behaviour: the stock exeuntu image ships the same unit and behaves the
-same way.
+overwrites the file on every boot with the script captured at `new` time. The
+unit's `ConditionPathExists` then passes again and the script runs again. This
+is platform behaviour: the stock exeuntu image ships the same unit and behaves
+the same way. `ssh exe.dev doc customization` says the script runs "at first
+boot, once"; on the VMs tested it does not.
 
 So a `--setup-script` must be idempotent. A script that is not fails on the
 second boot and every boot after, leaves `exe-setup.service` in `failed`, and
@@ -114,6 +115,13 @@ Guard anything that cannot run twice:
 ```sh
 id -u caddy >/dev/null 2>&1 || sudo useradd --system --user-group caddy
 ```
+
+The guard has to be in the script when the VM is created. `--setup-script`
+exists only on `new`, there is no command to view, edit or clear the script
+stored against an existing VM, and editing `/exe.dev/setup` on the box does
+not help because the stored copy overwrites it at the next boot. On a live VM
+that is already failing, the remaining options are to disable the unit, run
+`systemctl reset-failed` after every reboot, or rebuild the VM.
 
 ## Correlation with exeuntu
 
