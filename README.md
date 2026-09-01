@@ -84,7 +84,7 @@ script that installed a package and registered a systemd unit:
 |---|---|
 | Root filesystem grown to requested size | `systemd-growfs-root` → `active / success`, `/dev/root 15G` |
 | Failed units after boot | **0** |
-| `exe-setup.service` (`--setup-script`) | `success`, ran as `exedev`, self-cleaned `/exe.dev/setup` |
+| `exe-setup.service` (`--setup-script`) | `success`, ran as `exedev`, deleted `/exe.dev/setup`. exe.dev writes the file back on every boot, so the unit runs again each time; see [Setup scripts run on every boot](#setup-scripts-run-on-every-boot) |
 | Proxy port from `EXPOSE` | defaulted to `8000` |
 | HTTPS proxy end to end | served the app over the public URL |
 | `--env LANG=en_GB.UTF-8` | applied |
@@ -95,6 +95,26 @@ script that installed a package and registered a systemd unit:
 `apt-get update`, `apt-get install` and creating a systemd unit from scratch all
 work on the running VM, which also confirms the `policy-rc.d` removal.
 
+### Setup scripts run on every boot
+
+`exe-setup.service` deletes `/exe.dev/setup` after a successful run, but exe.dev
+writes the file back into the VM on every boot. The unit's
+`ConditionPathExists` then passes again and the script runs again. This is
+platform behaviour: the stock exeuntu image ships the same unit and behaves the
+same way.
+
+So a `--setup-script` must be idempotent. A script that is not fails on the
+second boot and every boot after, leaves `exe-setup.service` in `failed`, and
+`systemctl --failed` is never clean again. Seen on a real VM: a script with a
+bare `useradd --system` succeeded on the first boot and exited 9
+(`user already exists`) on the second.
+
+Guard anything that cannot run twice:
+
+```sh
+id -u caddy >/dev/null 2>&1 || sudo useradd --system --user-group caddy
+```
+
 ## Correlation with exeuntu
 
 This image was diffed line-by-line against exeuntu's Dockerfile. Everything
@@ -103,7 +123,7 @@ below is platform wiring that exe.dev depends on, and is reproduced here:
 | Platform requirement | Why it matters |
 |---|---|
 | `/etc/fstab` with `x-systemd.growfs` on `/dev/vda` | Without it `systemd-growfs@-.service` never runs, so `--disk=50GB` or `resize` boots with an **unexpanded root filesystem**. `/dev/vda` confirmed as the real root device on live VMs. |
-| `exe-setup.service` | Runs `/exe.dev/setup` on first boot. Without it `new --setup-script` is accepted and silently does nothing. |
+| `exe-setup.service` | Runs `/exe.dev/setup` on every boot, not only the first. Without it `new --setup-script` is accepted and silently does nothing. |
 | `CMD` file named exactly `init` | exe.dev's exetini decides a wrapper is an init *from the basename*, and execs rather than forks it. |
 | `EXPOSE 8000` | Sets the default proxy port. With no `EXPOSE`, exe.dev defaults to `:80`. |
 | `LABEL exe.dev/login-user=exedev` | Which user SSH lands as. |
