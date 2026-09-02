@@ -161,6 +161,16 @@ RUN mkdir -p /home/exedev/.claude /home/exedev/.codex /home/exedev/.pi \
 COPY init /usr/local/bin/init
 RUN chmod +x /usr/local/bin/init
 
+# Empty the machine ID that systemd's and dbus's package configuration baked in
+# during the apt layer above. Left as-is, every VM created from this image
+# shares one identity, which defeats anything that assumes machine IDs are
+# unique (systemd's FixedRandomDelay=, for one). Emptied rather than removed:
+# systemd reads an *absent* /etc/machine-id as first boot and presets all units,
+# re-enabling the ones disabled above. Must stay after the last apt-get install,
+# or a later package configure bakes in a fresh one. Mirrors exeuntu.
+RUN : >/etc/machine-id \
+	&& ln -sf /etc/machine-id /var/lib/dbus/machine-id
+
 # Sets the default proxy port. Without an EXPOSE, exe.dev defaults to :80
 # (verified on a stock ubuntu:24.04 VM); exeuntu exposes 8000 and 9999, the
 # latter being Shelley's. We have no Shelley, so 8000 alone.
