@@ -142,6 +142,7 @@ below is platform wiring that exe.dev depends on, and is reproduced here:
 | `rm /usr/sbin/policy-rc.d` | Otherwise apt-installed services silently fail to start. |
 | exedev uid 1000 via `usermod -l` | Renames the stock `ubuntu` user so uid/gid/home/subuid line up with exeuntu. |
 | linger + `XDG_RUNTIME_DIR` | Populates `/run/user/1000` so `systemd --user` works. |
+| Empty `/etc/machine-id` at the end of the build | Package configuration bakes an ID into the image, so every VM would share one identity. Emptied, not removed: an absent file makes systemd treat boot as first boot and re-enable the units disabled above. |
 
 Deliberately **not** carried over: Chrome/headless-shell, the Claude/Codex/pi
 agent *binaries*, the pi extension and catalog, nginx + its index page,
