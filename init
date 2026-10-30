@@ -23,7 +23,11 @@ fi
 # is 0 on live VMs, and services running as exedev do bind :80). Do it first
 # regardless — if /proc/sys ever arrives read-only, the `-w` guards below
 # would silently skip and low-port binding would break with no error.
-mount -o remount,rw /proc/sys 2>/dev/null || true
+# On VMs /proc/sys is not a separate mount (/proc is already writable), so
+# only remount when it is one.
+if mountpoint -q /proc/sys; then
+	mount -o remount,rw /proc/sys || true
+fi
 
 # Let unprivileged services bind :80/:443 directly.
 if [[ -w /proc/sys/net/ipv4/ip_unprivileged_port_start ]]; then
