@@ -97,7 +97,7 @@ work on the running VM, which also confirms the `policy-rc.d` removal.
 
 ### Setup scripts run on every boot
 
-`exe-setup.service` deletes `/exe.dev/setup` after a successful run, but exe.dev
+`exe-setup.service` deletes `/exe.dev/setup` after every run, pass or fail, but exe.dev
 overwrites the file on every boot with the script captured at `new` time. The
 unit's `ConditionPathExists` then passes again and the script runs again. This
 is platform behaviour: the stock exeuntu image ships the same unit and behaves
@@ -131,7 +131,7 @@ below is platform wiring that exe.dev depends on, and is reproduced here:
 | Platform requirement | Why it matters |
 |---|---|
 | `/etc/fstab` with `x-systemd.growfs` on `/dev/vda` | Without it `systemd-growfs@-.service` never runs, so `--disk=50GB` or `resize` boots with an **unexpanded root filesystem**. `/dev/vda` confirmed as the real root device on live VMs. |
-| `exe-setup.service` | Runs `/exe.dev/setup` on every boot, not only the first. Without it `new --setup-script` is accepted and silently does nothing. |
+| `exe-setup.service` | Runs `/exe.dev/setup` on every boot, not only the first. Sources `/etc/profile.d/exe-env.sh` first, so the script sees the VM's `new --env` variables. Without it `new --setup-script` is accepted and silently does nothing. |
 | `CMD` file named exactly `init` | exe.dev's exetini decides a wrapper is an init *from the basename*, and execs rather than forks it. |
 | `EXPOSE 8000` | Sets the default proxy port. With no `EXPOSE`, exe.dev defaults to `:80`. |
 | `LABEL exe.dev/login-user=exedev` | Which user SSH lands as. |
@@ -157,7 +157,7 @@ in populating the XDG runtime dir sockets.
 
 exe.dev runs the image's `Cmd` as PID 1. `/usr/local/bin/init` mirrors exeuntu's
 own wrapper: create `/run/systemd`, mount cgroup2 if absent, remount `/proc/sys`
-rw, set `ip_unprivileged_port_start=0` so unprivileged services can bind low
+rw if it is a separate mount, set `ip_unprivileged_port_start=0` so unprivileged services can bind low
 ports, then `exec /sbin/init`.
 
 One deliberate divergence: exeuntu does that remount *after* the sysctl writes.
