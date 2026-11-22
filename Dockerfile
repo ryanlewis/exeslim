@@ -120,6 +120,14 @@ COPY tmpfiles-tmp.conf /etc/tmpfiles.d/tmp.conf
 # that must be unique per VM (see below). Mirrors exeuntu.
 COPY --chmod=644 fstrim-timer.conf /etc/systemd/system/fstrim.timer.d/exe.conf
 
+# exe.dev writes each VM's git identity to /exe.dev/etc/gitconfig at creation
+# (https://exe.dev/docs/git-identity). git is not installed here, but this is
+# one line and means `apt-get install git` picks the identity up without anyone
+# configuring it. System config, so ~/.gitconfig still overrides it; git skips
+# a missing include. Written by hand because exeuntu's `git config --system`
+# needs git. Same target as exeuntu.
+RUN printf '[include]\n\tpath = /exe.dev/etc/gitconfig\n' >/etc/gitconfig
+
 # Makes `new --setup-script` work. Without this unit the flag is accepted and
 # then silently does nothing.
 COPY exe-setup.service /etc/systemd/system/exe-setup.service

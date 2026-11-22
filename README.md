@@ -138,6 +138,7 @@ below is platform wiring that exe.dev depends on, and is reproduced here:
 | `Storage=persistent` journald | `journalctl -u` is the main debugging surface on a box with no toolchain. |
 | `/etc/tmpfiles.d/tmp.conf` | Stops systemd wiping `/tmp` at boot, which races boot-time users. |
 | `fstrim.timer` drop-in: daily, `FixedRandomDelay=` | Ubuntu trims weekly in one shared window, so every VM on a host trims at once. Daily at a per-VM offset (derived from the machine ID) spreads the freed space out. |
+| `/etc/gitconfig` includes `/exe.dev/etc/gitconfig` | exe.dev writes the VM's git identity there. git is absent, but if it is installed later it picks the identity up; `~/.gitconfig` still overrides it. |
 | `rm /usr/sbin/policy-rc.d` | Otherwise apt-installed services silently fail to start. |
 | exedev uid 1000 via `usermod -l` | Renames the stock `ubuntu` user so uid/gid/home/subuid line up with exeuntu. |
 | linger + `XDG_RUNTIME_DIR` | Populates `/run/user/1000` so `systemd --user` works. |
