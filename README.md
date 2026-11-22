@@ -137,6 +137,7 @@ below is platform wiring that exe.dev depends on, and is reproduced here:
 | `DefaultOOMPolicy=continue` + `SystemCallArchitectures=native` | Container-appropriate manager defaults. |
 | `Storage=persistent` journald | `journalctl -u` is the main debugging surface on a box with no toolchain. |
 | `/etc/tmpfiles.d/tmp.conf` | Stops systemd wiping `/tmp` at boot, which races boot-time users. |
+| `fstrim.timer` drop-in: daily, `FixedRandomDelay=` | Ubuntu trims weekly in one shared window, so every VM on a host trims at once. Daily at a per-VM offset (derived from the machine ID) spreads the freed space out. |
 | `rm /usr/sbin/policy-rc.d` | Otherwise apt-installed services silently fail to start. |
 | exedev uid 1000 via `usermod -l` | Renames the stock `ubuntu` user so uid/gid/home/subuid line up with exeuntu. |
 | linger + `XDG_RUNTIME_DIR` | Populates `/run/user/1000` so `systemd --user` works. |
@@ -314,7 +315,7 @@ therefore gets validated before it can reach `:latest`.
 ## Licence
 
 The build recipe in this repository — `Dockerfile`, `init`, `exe-setup.service`,
-`tmpfiles-tmp.conf`, `AGENTS.md` and the workflow — is MIT licensed, so fork and
+`tmpfiles-tmp.conf`, `fstrim-timer.conf`, `AGENTS.md` and the workflow — is MIT licensed, so fork and
 adapt it freely. See [LICENSE](LICENSE).
 
 The **image** that recipe produces is a different matter: it is Ubuntu plus a

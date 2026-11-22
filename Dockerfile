@@ -113,6 +113,13 @@ RUN echo '/dev/vda / ext4 defaults,x-systemd.growfs 0 1' >/etc/fstab
 # Stop systemd wiping /tmp at boot; it races non-systemd users that run at boot.
 COPY tmpfiles-tmp.conf /etc/tmpfiles.d/tmp.conf
 
+# Ubuntu's fstrim.timer (enabled by util-linux) trims weekly, Monday midnight
+# plus up to 100 minutes, so every VM on a host trims in the same window and the
+# freed space reaches the host late and all at once. Trim daily instead, at a
+# per-VM offset: FixedRandomDelay= derives it from the machine ID, which is why
+# that must be unique per VM (see below). Mirrors exeuntu.
+COPY --chmod=644 fstrim-timer.conf /etc/systemd/system/fstrim.timer.d/exe.conf
+
 # Makes `new --setup-script` work. Without this unit the flag is accepted and
 # then silently does nothing.
 COPY exe-setup.service /etc/systemd/system/exe-setup.service
